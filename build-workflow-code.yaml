@@ -3,7 +3,7 @@ kind: Workflow
 metadata:
   generateName: build-workflow-
 spec:
-  entrypoint: clone
+  entrypoint: main
   arguments:
     parameters:
     - name: repo-url
@@ -14,9 +14,15 @@ spec:
       value: frederiquer/vote
     - name: dockerfile
       value: Dockerfile
+  volumeClaimTemplates:
+  - metadata:
+      name: build-volume
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 100Mi
   volumes:
-  - name: build-volume
-    emptyDir: {}
   - name: docker-config
     secret:
       secretName: docker-registry-creds
@@ -24,7 +30,7 @@ spec:
       - key: .dockerconfigjson
         path: config.json
   templates:
-  - name: clone
+  - name: main
     inputs:
       parameters:
       - name: repo-url
@@ -67,6 +73,7 @@ spec:
         #!/bin/sh
         cd /clone
         git clone --branch {{inputs.parameters.branch}} {{inputs.parameters.repo-url}} /clone
+        ls /clone
         COMMIT_SHA=$(git rev-parse --short HEAD)
         echo $COMMIT_SHA > /clone/commit-sha.txt
       volumeMounts:
@@ -77,11 +84,10 @@ spec:
       - name: commit-sha
         valueFrom: 
           path: "/clone/commit-sha.txt"
-
   - name: task-build
     script:
       image: python:alpine3.17
-      command: ['sh']
+      command: ['sh', '-c']
       source: |
         #!/bin/sh
         cd /clone/src
@@ -92,12 +98,13 @@ spec:
 
   - name: task-test
     script:
-      image: python:alpine3.17
+      image: python:3.9
       command: ['sh']
       source: |
         #!/bin/sh
-        cd /clone/src
+        pip install --upgrade pip
         pip install nose
+        cd /clone/src
         nosetests
       volumeMounts:
       - name: build-volume
@@ -113,7 +120,7 @@ spec:
       image: gcr.io/kaniko-project/executor:latest
       command: ["/kaniko/executor"]
       args:
-      - --docker-file=/clone/src/{{inputs.parameters.dockerfile}}
+      - --dockerfile=/clone/src/{{inputs.parameters.dockerfile}}
       - --context=/clone/src
       - --destination={{inputs.parameters.image}}:{{inputs.parameters.commit-sha}}
       - --force
