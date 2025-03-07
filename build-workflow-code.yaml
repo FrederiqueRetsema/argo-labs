@@ -3,30 +3,85 @@ kind: Workflow
 metadata:
   generateName: build-workflow-
 spec:
-  entryPoint: main
-  inputs:
+  entrypoint: main
+  arguments:
     parameters:
-    - name: reponame
+    - name: repo-url
       value: https://github.com/FrederiqueRetsema/argo-labs
+    - name: branch
+      value: HEAD
+  volumes:
+  - name: build-volume
+    emptyDir: {}
+  - name: docker-config
+    secret:
+      secretName: docker-registry-creds
+      items:
+      - key: .dockerconfigjson
+        path: config.json
   templates:
-  - name: main
+  - name: clone
+    inputs:
+      parameters:
+      - name: repo-url
     dag:
       tasks:
-      - name: main
+      - name: clone
+        template: task-clone
+        arguments:
+          parameters: [{name: repo-url, value: {{inputs.parameters.repo-url}},
+                       {name: branch, value: {{inputs.parameters.branch}}]
+      - name: build
         template: run-container
         arguments:
-          parameters:
-          - name: name
-            value: clone
-          - name: command
-            value: git clone {{inputs.parameters.reponame}}
+          parameters: [{name: name, value: build},
+                       {name: command, value: "cd src && pip install"}]
+  - name: task-clone
+    inputs:
+      parameters:
+      - name: repo-url
+      - name: branch
+    script:
+      image: alpine/git:latest
+      command: ['sh', '-c']
+      source: |
+        #!/bin/sh
+        cd /clone
+        git clone --branch {{inputs.parameters.branch}} {{inputs.parameters.repo-url}} /clone
+        COMMIT_SHA=$(git rev-parse --short HEAD)
+        echo $COMMIT_SHA > /clone/commit-sha.txt
+      outputs:
+        parameters:
+        - name: commit-sha
+          valueFrom: /clone/commit-sha.txt
+      volumeMounts:
+      - name: build-volume
+        mountPath: /clone
+
+  - name: task-build
+    script:
+      image: python:3.9
+      command: ['sh']
+      source: |
+        #!/bin/sh
+        cd /clone/src
+        pip install -r requirements.txt
+      volumeMounts:
+      - name: build-volume
+        mountPath: /clone
+
   - name: run-container
     inputs:
       parameters:
-      - name
-      - command
+      - name: name
+      - name: command
     script:
-      image: busybox:latest
+      image: alpine:latest
       command: ['sh', '-c']
       source: |
+        echo "Task: {{input.parameters.name}}"
         {{inputs.parameters.command}}
+      volumeMounts:
+      - name: build-volume
+        mountPath: /clone
+
