@@ -3,13 +3,17 @@ kind: Workflow
 metadata:
   generateName: build-workflow-
 spec:
-  entrypoint: main
+  entrypoint: clone
   arguments:
     parameters:
     - name: repo-url
       value: https://github.com/FrederiqueRetsema/argo-labs
     - name: branch
-      value: HEAD
+      value: main
+    - name: image
+      value: frederiquer/vote
+    - name: dockerfile
+      value: Dockerfile
   volumes:
   - name: build-volume
     emptyDir: {}
@@ -24,18 +28,33 @@ spec:
     inputs:
       parameters:
       - name: repo-url
+      - name: branch
+      - name: image
+      - name: dockerfile
     dag:
       tasks:
       - name: clone
         template: task-clone
         arguments:
-          parameters: [{name: repo-url, value: {{inputs.parameters.repo-url}},
-                       {name: branch, value: {{inputs.parameters.branch}}]
+          parameters: [{name: repo-url, value: "{{inputs.parameters.repo-url}}" },
+                       {name: branch, value: "{{inputs.parameters.branch}}" }]
       - name: build
-        template: run-container
+        template: task-build
+        dependencies: [clone]
+      - name: test
+        template: task-test
+        dependencies: [build]
+      - name: imagebuild
+        template: task-imagebuild
         arguments:
-          parameters: [{name: name, value: build},
-                       {name: command, value: "cd src && pip install"}]
+          parameters:
+          - name: commit-sha
+            value: "{{tasks.clone.outputs.parameters.commit-sha}}"
+          - name: image
+            value: "{{inputs.parameters.image}}"
+          - name: dockerfile
+            value: "{{inputs.parameters.dockerfile}}"
+        dependencies: [test]
   - name: task-clone
     inputs:
       parameters:
@@ -50,17 +69,18 @@ spec:
         git clone --branch {{inputs.parameters.branch}} {{inputs.parameters.repo-url}} /clone
         COMMIT_SHA=$(git rev-parse --short HEAD)
         echo $COMMIT_SHA > /clone/commit-sha.txt
-      outputs:
-        parameters:
-        - name: commit-sha
-          valueFrom: /clone/commit-sha.txt
       volumeMounts:
       - name: build-volume
         mountPath: /clone
+    outputs:
+      parameters:
+      - name: commit-sha
+        valueFrom: 
+          path: "/clone/commit-sha.txt"
 
   - name: task-build
     script:
-      image: python:3.9
+      image: python:alpine3.17
       command: ['sh']
       source: |
         #!/bin/sh
@@ -70,18 +90,39 @@ spec:
       - name: build-volume
         mountPath: /clone
 
-  - name: run-container
-    inputs:
-      parameters:
-      - name: name
-      - name: command
+  - name: task-test
     script:
-      image: alpine:latest
-      command: ['sh', '-c']
+      image: python:alpine3.17
+      command: ['sh']
       source: |
-        echo "Task: {{input.parameters.name}}"
-        {{inputs.parameters.command}}
+        #!/bin/sh
+        cd /clone/src
+        pip install nose
+        nosetests
       volumeMounts:
       - name: build-volume
         mountPath: /clone
+
+  - name: task-imagebuild
+    inputs:
+      parameters:
+      - name: commit-sha
+      - name: image
+      - name: dockerfile
+    container:
+      image: gcr.io/kaniko-project/executor:latest
+      command: ["/kaniko/executor"]
+      args:
+      - --docker-file=/clone/src/{{inputs.parameters.dockerfile}}
+      - --context=/clone/src
+      - --destination={{inputs.parameters.image}}:{{inputs.parameters.commit-sha}}
+      - --force
+      volumeMounts:
+      - name: build-volume
+        mountPath: /clone
+      - name: docker-config
+        mountPath: /kaniko/.docker
+      env:
+      - name: DOCKER_CONFIG
+        value: "/kaniko/.docker"
 
