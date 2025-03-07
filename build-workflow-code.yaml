@@ -1,0 +1,32 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: build-workflow-
+spec:
+  entryPoint: main
+  inputs:
+    parameters:
+    - name: reponame
+      value: https://github.com/FrederiqueRetsema/argo-labs
+  templates:
+  - name: main
+    dag:
+      tasks:
+      - name: main
+        template: run-container
+        arguments:
+          parameters:
+          - name: name
+            value: clone
+          - name: command
+            value: git clone {{inputs.parameters.reponame}}
+  - name: run-container
+    inputs:
+      parameters:
+      - name
+      - command
+    script:
+      image: busybox:latest
+      command: ['sh', '-c']
+      source: |
+        {{inputs.parameters.command}}
