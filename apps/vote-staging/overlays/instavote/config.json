@@ -1,0 +1,11 @@
+{
+  "appName": "vote-staging",
+  "userGivenName": "vote-staging",
+  "destNamespace": "default",
+  "destServer": "https://kubernetes.default.svc",
+  "srcPath": "apps/vote-staging/overlays/instavote",
+  "srcRepoURL": "https://github.com/FrederiqueRetsema/argo-labs.git",
+  "srcTargetRevision": "",
+  "labels": null,
+  "annotations": null
+}
