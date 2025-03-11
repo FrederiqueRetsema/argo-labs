@@ -78,6 +78,7 @@ spec:
       command: [sh]
       source: |
         #!/bin/sh
+        rm -fr /workspace/.git/*
         rm -fr /workspace/*
         git clone --branch {{inputs.parameters.branch}} {{inputs.parameters.repo-url}} /workspace
         cd /workspace
