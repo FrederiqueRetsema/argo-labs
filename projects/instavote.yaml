@@ -14,13 +14,17 @@ spec:
     kind: '*'
   description: instavote project
   destinations:
-  - namespace: '*'
-    server: '*'
+  - namespace: "staging"
+    server: https://kubernetes.default.svc
+    name: in-cluster
+  - namespace: "prod"
+    server: https://kubernetes.default.svc
+    name: in-cluster
   namespaceResourceWhitelist:
   - group: '*'
     kind: '*'
   sourceRepos:
-  - '*'
+  - 'https://github.com/FrederiqueRetsema/argo-labs'
 status: {}
 
 ---
