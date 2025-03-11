@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Workflow
 metadata:
-  generateName: build-workflow-prod-
+  generateName: build-workflow-staging-
   namespace: argo
 spec:
   entrypoint: main
@@ -10,7 +10,7 @@ spec:
     - name: repo-url
       value: https://github.com/FrederiqueRetsema/argo-labs
     - name: branch
-      value: release         # <-- should be main/master for prod, but following Udemy training
+      value: main
     - name: image
       value: frederiquer/vote
     - name: dockerfile
