@@ -1,0 +1,11 @@
+{
+  "appName": "vote-prod",
+  "userGivenName": "vote-prod",
+  "destNamespace": "prod",
+  "destServer": "https://kubernetes.default.svc",
+  "srcPath": "apps/vote-prod/overlays/instavote",
+  "srcRepoURL": "https://github.com/FrederiqueRetsema/argo-labs.git",
+  "srcTargetRevision": "",
+  "labels": null,
+  "annotations": null
+}
