@@ -132,7 +132,7 @@ spec:
       command: ["/kaniko/executor"]
       args:
       - --dockerfile=/workspace/src/{{inputs.parameters.dockerfile}}
-      - --context=/workspace
+      - --context=/workspace/src
       - --destination={{inputs.parameters.image}}:{{inputs.parameters.commit-sha}}
       - --force
       volumeMounts:
