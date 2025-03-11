@@ -7,4 +7,4 @@ resources:
 images:
 - name: schoolofdevops/vote
   newName: frederiquer/vote
-  newTag: 9887dfa
+  newTag: be09df7
