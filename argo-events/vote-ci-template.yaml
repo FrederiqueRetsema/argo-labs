@@ -21,7 +21,7 @@ spec:
   - metadata:
       name: workspace
     spec:
-      storageClassName: argo-workflow-pv
+      storageClassName: argo-workflows-pv
       accessModes: ["ReadWriteOnce"]
       resources:
         requests:
@@ -78,7 +78,7 @@ spec:
       command: [sh]
       source: |
         #!/bin/sh
-        rm -fr /workspace
+        rm -fr /workspace/*
         git clone --branch {{inputs.parameters.branch}} {{inputs.parameters.repo-url}} /workspace
         cd /workspace
         COMMIT_SHA=$(git rev-parse --short HEAD)
@@ -130,7 +130,7 @@ spec:
       image: gcr.io/kaniko-project/executor:latest
       command: ["/kaniko/executor"]
       args:
-      - --dockerfile=/workspace/{{inputs.parameters.dockerfile}}
+      - --dockerfile=/workspace/src/{{inputs.parameters.dockerfile}}
       - --context=/workspace
       - --destination={{inputs.parameters.image}}:{{inputs.parameters.commit-sha}}
       - --force

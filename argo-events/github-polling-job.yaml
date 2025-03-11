@@ -72,9 +72,9 @@ spec:
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: argo-workflow-pv
+  name: argo-workflows-pv
 spec:
-  storageClassName: argo-workflow-pv
+  storageClassName: argo-workflows-pv
   capacity:
     storage: 100Gi
   volumeMode: Filesystem
